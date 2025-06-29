@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spaced Repetition App</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f0f0f;
+      color: #e0e0e0;
+      padding: 20px;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      color: #ffffff;
+      margin-bottom: 30px;
+    }
+    .note-form, .review-section, .all-notes {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 20px;
+      margin-bottom: 25px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      backdrop-filter: blur(5px);
+    }
+    input, textarea, button {
+      width: calc(100% - 24px);
+      margin-top: 10px;
+      padding: 12px;
+      font-size: 1em;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid #444;
+      color: #f5f5f5;
+      border-radius: 8px;
+      transition: background 0.3s ease;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    button {
+      background: linear-gradient(145deg, #3f51b5, #1a237e);
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 8px;
+      transition: transform 0.2s, background 0.3s;
+    }
+    button:hover {
+      background: linear-gradient(145deg, #5c6bc0, #283593);
+      transform: scale(1.02);
+    }
+    .note-card, .saved-note-card {
+      padding: 15px;
+      margin: 12px 0;
+      border-radius: 10px;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+    .note-card {
+      background: linear-gradient(to right, #1b5e20, #388e3c);
+      color: #e8f5e9;
+      box-shadow: 0 4px 12px rgba(56, 142, 60, 0.3);
+    }
+    .saved-note-card {
+      background: linear-gradient(to right, #0d47a1, #1976d2);
+      color: #e3f2fd;
+      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .toggle-btn {
+      background: #1e1e1e;
+      color: #bbb;
+      border: 1px solid #555;
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.3s;
+    }
+    .toggle-btn:hover {
+      background: #333;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧠 Spaced Repetition Revision App</h1>
+
+  <div class="note-form">
+    <h2>Add New Study Note</h2>
+    <input type="text" id="title" placeholder="Title" />
+    <textarea id="content" rows="4" placeholder="What did you study?"></textarea>
+    <button onclick="addNote()">💾 Save Note</button>
+  </div>
+
+  <div class="review-section">
+    <h2>Today's Reviews</h2>
+    <div id="reviews"></div>
+  </div>
+
+  <div class="all-notes">
+    <div class="section-header">
+      <h2>All Notes</h2>
+      <button class="toggle-btn" onclick="toggleNotes()">Expand</button>
+    </div>
+    <div id="allNotes" style="display: none;"></div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'study_notes';
+
+    function getLocalDate() {
+      return new Date().toLocaleDateString('en-CA');
+    }
+
+    function getNotes() {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    }
+
+    function saveNotes(notes) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+    }
+
+    function addNote() {
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      if (!title || !content) return alert('Please fill both fields');
+
+      const created = getLocalDate();
+      const note = {
+        id: Date.now(),
+        title,
+        content,
+        created,
+        reviewDates: getReviewDates(created),
+        completedReviews: []
+      };
+
+      const notes = getNotes();
+      notes.push(note);
+      saveNotes(notes);
+      document.getElementById('title').value = '';
+      document.getElementById('content').value = '';
+      loadReviews();
+      loadAllNotes();
+    }
+
+    function getReviewDates(startDate) {
+      const days = [4, 7, 15, 30];
+      const base = new Date(startDate);
+      return days.map(d => {
+        const newDate = new Date(base);
+        newDate.setDate(base.getDate() + d);
+        return newDate.toLocaleDateString('en-CA');
+      });
+    }
+
+    function loadReviews() {
+      const notes = getNotes();
+      const today = getLocalDate();
+      const reviewsDiv = document.getElementById('reviews');
+      reviewsDiv.innerHTML = '';
+
+      const todayReviews = notes.filter(note =>
+        note.reviewDates.includes(today) && !note.completedReviews.includes(today)
+      );
+
+      if (todayReviews.length === 0) {
+        reviewsDiv.innerHTML = '<p>No reviews scheduled for today!</p>';
+        return;
+      }
+
+      todayReviews.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'note-card';
+        card.innerHTML = `
+          <h3>${note.title}</h3>
+          <p>${note.content}</p>
+          <button onclick="markReviewed(${note.id})">✅ Mark as Reviewed</button>
+        `;
+        reviewsDiv.appendChild(card);
+      });
+    }
+
+    function loadAllNotes() {
+      const notes = getNotes();
+      const allNotesDiv = document.getElementById('allNotes');
+      allNotesDiv.innerHTML = '';
+
+      if (notes.length === 0) {
+        allNotesDiv.innerHTML = '<p>No notes added yet.</p>';
+        return;
+      }
+
+      notes.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'saved-note-card';
+        card.innerHTML = `
+          <h3>${note.title}</h3>
+          <p>${note.content}</p>
+          <p><small>📅 Added on: ${note.created}</small></p>
+          <button onclick="deleteNote(${note.id})">🗑️ Delete</button>
+        `;
+        allNotesDiv.appendChild(card);
+      });
+    }
+
+    function deleteNote(id) {
+      const notes = getNotes().filter(note => note.id !== id);
+      saveNotes(notes);
+      loadReviews();
+      loadAllNotes();
+    }
+
+    function markReviewed(id) {
+      const notes = getNotes();
+      const today = getLocalDate();
+      const note = notes.find(n => n.id === id);
+      if (note && !note.completedReviews.includes(today)) {
+        note.completedReviews.push(today);
+        saveNotes(notes);
+        loadReviews();
+        loadAllNotes();
+      }
+    }
+
+    function toggleNotes() {
+      const allNotesDiv = document.getElementById('allNotes');
+      const toggleBtn = document.querySelector('.toggle-btn');
+      if (allNotesDiv.style.display === 'none') {
+        allNotesDiv.style.display = 'block';
+        toggleBtn.textContent = 'Minimize';
+      } else {
+        allNotesDiv.style.display = 'none';
+        toggleBtn.textContent = 'Expand';
+      }
+    }
+
+    window.onload = function() {
+      loadReviews();
+      loadAllNotes();
+    }
+  </script>
+</body>
+</html>
