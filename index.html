@@ -159,7 +159,7 @@
     }
 
     function getReviewDates(startDate) {
-      const days = [4, 7, 15, 30];
+      const days = [3, 7, 15, 30, 45, 60, 90, 120, 150, 180];
       const base = new Date(startDate);
       return days.map(d => {
         const newDate = new Date(base);
