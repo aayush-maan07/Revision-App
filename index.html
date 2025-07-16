@@ -1,101 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spaced Repetition Revision App</title>
-  <link rel="icon" type="image/png" href="icon.png">
-  <link rel="apple-touch-icon" href="icon.png">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f0f0f">
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #0f0f0f;
-      color: #e0e0e0;
-      padding: 20px;
-      margin: 0;
-    }
-    h1 {
-      text-align: center;
-      color: #ffffff;
-      margin-bottom: 30px;
-    }
-    .note-form, .review-section, .all-notes {
-      background: rgba(255, 255, 255, 0.03);
-      padding: 20px;
-      margin-bottom: 25px;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      backdrop-filter: blur(5px);
-    }
-    input, textarea, button {
-      width: calc(100% - 24px);
-      margin-top: 10px;
-      padding: 12px;
-      font-size: 1em;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid #444;
-      color: #f5f5f5;
-      border-radius: 8px;
-      transition: background 0.3s ease;
-    }
-    input:focus, textarea:focus {
-      outline: none;
-      background: rgba(255, 255, 255, 0.1);
-    }
-    button {
-      background: #1a237e;
-      border: none;
-      color: white;
-      font-weight: bold;
-      border-radius: 8px;
-      transition: transform 0.2s, background 0.3s;
-    }
-    button:hover {
-      background: #283593;
-      transform: scale(1.02);
-    }
-    .note-card, .saved-note-card {
-      padding: 15px;
-      margin: 12px 0;
-      border-radius: 10px;
-      transition: background 0.3s, box-shadow 0.3s;
-    }
-    .note-card {
-      background: linear-gradient(to right, #1b5e20, #388e3c);
-      color: #e8f5e9;
-      box-shadow: 0 4px 12px rgba(56, 142, 60, 0.3);
-    }
-    .saved-note-card {
-      background: linear-gradient(to right, #0d47a1, #1976d2);
-      color: #e3f2fd;
-      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
-    }
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .toggle-btn {
-      background: #1e1e1e;
-      color: #bbb;
-      border: 1px solid #555;
-      padding: 6px 12px;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.3s;
-    }
-    .toggle-btn:hover {
-      background: #333;
-      color: #fff;
-    }
-  </style>
-</head>
 <body>
   <h1>🧠 Spaced Repetition Revision App</h1>
 
@@ -109,6 +11,11 @@
   <div class="review-section">
     <h2>Today's Reviews</h2>
     <div id="reviews"></div>
+  </div>
+
+  <div class="review-section">
+    <h2>Reviewed Today</h2>
+    <div id="reviewedToday"></div>
   </div>
 
   <div class="all-notes">
@@ -156,6 +63,7 @@
       document.getElementById('content').value = '';
       loadReviews();
       loadAllNotes();
+      loadReviewedToday();
     }
 
     function getReviewDates(startDate) {
@@ -195,6 +103,31 @@
       });
     }
 
+    function loadReviewedToday() {
+      const notes = getNotes();
+      const today = getLocalDate();
+      const reviewedToday = notes.filter(note =>
+        note.completedReviews.includes(today)
+      );
+      const reviewedDiv = document.getElementById('reviewedToday');
+      reviewedDiv.innerHTML = '';
+
+      if (reviewedToday.length === 0) {
+        reviewedDiv.innerHTML = '<p>No reviews completed today.</p>';
+        return;
+      }
+
+      reviewedToday.forEach(note => {
+        const card = document.createElement('div');
+        card.className = 'note-card';
+        card.innerHTML = `
+          <h3>${note.title}</h3>
+          <p>${note.content}</p>
+        `;
+        reviewedDiv.appendChild(card);
+      });
+    }
+
     function loadAllNotes() {
       const notes = getNotes();
       const allNotesDiv = document.getElementById('allNotes');
@@ -222,6 +155,7 @@
       const notes = getNotes().filter(note => note.id !== id);
       saveNotes(notes);
       loadReviews();
+      loadReviewedToday();
       loadAllNotes();
     }
 
@@ -233,6 +167,7 @@
         note.completedReviews.push(today);
         saveNotes(notes);
         loadReviews();
+        loadReviewedToday();
         loadAllNotes();
       }
     }
@@ -249,8 +184,9 @@
       }
     }
 
-    window.onload = function() {
+    window.onload = function () {
       loadReviews();
+      loadReviewedToday();
       loadAllNotes();
 
       if ('serviceWorker' in navigator) {
@@ -258,7 +194,6 @@
           .then(() => console.log('Service Worker Registered'))
           .catch(err => console.error('Service Worker Error:', err));
       }
-    }
+    };
   </script>
 </body>
-</html>
